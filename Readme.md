@@ -22,7 +22,7 @@ A RESTful API built with **FastAPI** for planning trips and collecting artworks 
 
 1. **Clone the repository:**
    ```bash
-   git clone <your-repository-link>
+   git clone <https://github.com/strixxjs/travel-planner>
   `cd travel_planner`
 
 2. **Set up a VE:**
