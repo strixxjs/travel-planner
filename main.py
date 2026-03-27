@@ -40,6 +40,35 @@ def create_project(project: schemas.ProjectCreate, db: Session = Depends(get_db)
     return db_project
 
 
+@app.get("/projects/{project_id}", response_model=schemas.ProjectResponse)
+def get_project(project_id: int, db: Session = Depends(get_db)):
+    db_project = db.query(models.Project).filter(models.Project.id == project_id).first()
+
+    if db_project is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    return db_project
+
+
+@app.delete("/projects/{project_id}")
+def delete_project(project_id: int, db: Session = Depends(get_db)):
+    db_project = db.query(models.Project).filter(models.Project.id == project_id).first()
+
+    if db_project is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    for place in db_project.places:
+        if place.is_visited:
+            raise HTTPException(
+                status_code=400, detail="Cannot delete project - some place is already visited"
+            )
+
+    db.delete(db_project)
+    db.commit()
+
+    return {"message": "Project deleted"}
+
+
 @app.get("/projects/", response_model=List[schemas.ProjectResponse])
 def get_projects(db: Session = Depends(get_db)):
     projects = db.query(models.Project).all()
@@ -75,3 +104,43 @@ def add_place_to_project(project_id: int, place: schemas.PlaceCreate, db: Sessio
 
     return db_place
 
+
+@app.get("/projects/{project_id}/places/", response_model=List[schemas.PlaceResponse])
+def get_places_for_project(project_id: int, db: Session = Depends(get_db)):
+    db_project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not db_project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    return db_project.places
+
+
+@app.get ("/projects/{project_id}/places/{place_id}/", response_model=schemas.PlaceResponse)
+def get_place(project_id: int, place_id: int, db: Session = Depends(get_db)):
+    db_place = db.query(models.Place).filter(
+        models.Place.id == place_id,
+        models.Place.project_id == project_id
+    ).first()
+
+    if not db_place:
+        raise HTTPException(status_code=404, detail="Place not found")
+
+    return db_place
+
+
+@app.put("/projects/{project_id}/places/{place_id}/", response_model=schemas.PlaceResponse)
+def update_place(project_id: int, place_id: int, place_update: schemas.PlaceUpdate, db: Session = Depends(get_db)):
+    db_place = db.query(models.Place).filter(
+        models.Place.id == place_id,
+        models.Place.project_id == project_id
+    ).first()
+
+    if not db_place:
+        raise HTTPException(status_code=404, detail="Place not found")
+
+    update_data = place_update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_place, key, value)
+
+    db.commit()
+    db.refresh(db_place)
+    return db_place
