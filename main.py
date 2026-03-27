@@ -31,11 +31,20 @@ def get_db():
 
 @app.post("/projects/", response_model=schemas.ProjectResponse)
 def create_project(project: schemas.ProjectCreate, db: Session = Depends(get_db)):
-    db_project = models.Project(**project.model_dump())
-
+    project_data = project.model_dump(exclude={"places"})
+    db_project = models.Project(**project_data)
     db.add(db_project)
     db.commit()
     db.refresh(db_project) # upd for recieve generated ID
+
+    if project.places:
+        for p_data in project.places:
+            api_res = get_place_from_api(p_data.external_id)
+            if api_res["exists"]:
+                new_place = models.Place(**p_data.model_dump(), project_id=db_project.id)
+                db.add(new_place)
+        db.commit()
+        db.refresh(db_project)
 
     return db_project
 
@@ -143,4 +152,13 @@ def update_place(project_id: int, place_id: int, place_update: schemas.PlaceUpda
 
     db.commit()
     db.refresh(db_place)
+
+    db_project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    all_visited = all(p.is_visited for p in db_project.places)
+    if all_visited and len(db_project.places) > 0:
+        db_project.is_completed = True
+    else:
+        db_project.is_completed = False
+
+    db.commit()
     return db_place

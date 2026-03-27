@@ -10,6 +10,7 @@ class Project(Base):
 
     description = Column(String, nullable=True)
     start_date = Column(Date, nullable=True)
+    is_completed = Column(Boolean, default=False)
 
     places = relationship("Place", back_populates="project", cascade="all, delete-orphan")
 
