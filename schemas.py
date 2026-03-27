@@ -23,3 +23,26 @@ class ProjectResponse(ProjectBase):
 
     class Config:
         from_attributes = True # these settings allow Pydantic to read data directly from the objects SQLAlchemy
+
+
+class PlaceBase(BaseModel):
+    external_id: str
+    notes: Optional[str] = None
+
+
+class PlaceCreate(PlaceBase):
+    pass
+
+
+class PlaceUpdate(BaseModel):
+    notes: Optional[str] = None
+    is_visited: Optional[bool] = None
+
+
+class PlaceResponse(PlaceBase):
+    id: int
+    project_id: int
+    is_visited: bool
+
+    class Config:
+        from_attributes = True
